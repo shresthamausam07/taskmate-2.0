@@ -20,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/households', require('./routes/households'));
 app.use('/api/expenses', require('./routes/expenses'));
+app.use('/api/shopping', require('./routes/shopping'));
 
 io.on('connection', (socket) => {
   socket.on('join:room', (roomId) => socket.join(roomId));
