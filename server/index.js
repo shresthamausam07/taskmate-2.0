@@ -18,6 +18,7 @@ app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json());
 
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/households', require('./routes/households'));
 
 io.on('connection', (socket) => {
   socket.on('join:room', (roomId) => socket.join(roomId));
