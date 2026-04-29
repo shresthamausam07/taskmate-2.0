@@ -21,6 +21,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/households', require('./routes/households'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/shopping', require('./routes/shopping'));
+app.use('/api/chores', require('./routes/chores'));
 
 io.on('connection', (socket) => {
   socket.on('join:room', (roomId) => socket.join(roomId));
