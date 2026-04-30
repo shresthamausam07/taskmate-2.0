@@ -18,6 +18,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ description: '', amount: '', category: 'general', paid_by_id: '' });
+  const [splitAmong, setSplitAmong] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,8 +45,25 @@ export default function ExpensesPage() {
     return bal;
   };
 
+  const openForm = () => {
+    setSplitAmong(household?.members?.map((m) => m._id) || []);
+    setForm({ description: '', amount: '', category: 'general', paid_by_id: '' });
+    setError('');
+    setShowForm(true);
+  };
+
+  const toggleSplitMember = (memberId) => {
+    setSplitAmong((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
+    );
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
+    if (splitAmong.length === 0) {
+      setError('Select at least one person to split with.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -55,6 +73,7 @@ export default function ExpensesPage() {
         description: form.description,
         category: form.category,
         paid_by_id: form.paid_by_id || user._id,
+        split_among: splitAmong,
       });
       setForm({ description: '', amount: '', category: 'general', paid_by_id: '' });
       setShowForm(false);
@@ -87,7 +106,7 @@ export default function ExpensesPage() {
             <h1 className="text-xl font-bold text-gray-900">{household?.name || 'Group'}</h1>
             <p className="text-xs text-gray-400">Expenses</p>
           </div>
-          <button onClick={() => setShowForm(!showForm)}
+          <button onClick={() => showForm ? setShowForm(false) : openForm()}
             className="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-semibold">
             <Plus size={15} />
             Add
@@ -125,7 +144,38 @@ export default function ExpensesPage() {
                 ))}
               </select>
             </div>
-            <p className="text-xs text-gray-400">Split equally among {household?.members?.length || 1} members</p>
+            <div>
+              <p className="text-xs text-gray-500 mb-2">
+                Split among ({splitAmong.length} of {household?.members?.length || 1})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {household?.members?.map((m) => {
+                  const selected = splitAmong.includes(m._id);
+                  return (
+                    <button
+                      key={m._id}
+                      type="button"
+                      onClick={() => toggleSplitMember(m._id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        selected
+                          ? 'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-500 border-gray-300'
+                      }`}
+                    >
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-white text-indigo-600' : 'bg-gray-200 text-gray-500'}`}>
+                        {m.name[0]?.toUpperCase()}
+                      </span>
+                      {m._id === user?._id ? 'You' : m.name.split(' ')[0]}
+                    </button>
+                  );
+                })}
+              </div>
+              {splitAmong.length > 0 && form.amount && (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  ${(parseFloat(form.amount) / splitAmong.length).toFixed(2)} each
+                </p>
+              )}
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm">Cancel</button>
               <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-60">

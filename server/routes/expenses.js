@@ -25,15 +25,20 @@ router.get('/:householdId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { household_id, amount, description, category, paid_by_id } = req.body;
+    const { household_id, amount, description, category, paid_by_id, split_among } = req.body;
     const household = await Household.findById(household_id);
     if (!household) return res.status(404).json({ message: 'Group not found' });
 
     const payer = paid_by_id || req.user.id;
     const expense = await Expense.create({ household_id, payer_id: payer, amount, description, category });
 
-    const splitAmount = parseFloat((amount / household.members.length).toFixed(2));
-    const splits = household.members.map((memberId) => ({
+    // Use provided split_among list, or fall back to all household members
+    const memberIds = (split_among && split_among.length > 0)
+      ? split_among
+      : household.members.map((m) => m.toString());
+
+    const splitAmount = parseFloat((amount / memberIds.length).toFixed(2));
+    const splits = memberIds.map((memberId) => ({
       expense_id: expense._id,
       user_id: memberId,
       amount_owed: splitAmount,

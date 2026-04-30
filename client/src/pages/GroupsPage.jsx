@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LogIn, ChevronRight, Users } from 'lucide-react';
+import { Plus, LogIn, ChevronRight, Users, Bell } from 'lucide-react';
 import api from '../services/api';
 import { useHousehold } from '../context/HouseholdContext';
 import NavBar from '../components/NavBar';
@@ -13,6 +13,39 @@ export default function GroupsPage() {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [invites, setInvites] = useState([]);
+  const [inviteLoading, setInviteLoading] = useState({});
+
+  const loadInvites = async () => {
+    try {
+      const { data } = await api.get('/households/invites');
+      setInvites(data);
+    } catch {}
+  };
+
+  useEffect(() => { loadInvites(); }, []);
+
+  const handleAcceptInvite = async (inviteId) => {
+    setInviteLoading((p) => ({ ...p, [inviteId]: 'accept' }));
+    try {
+      await api.put(`/households/invites/${inviteId}/accept`);
+      await loadAll();
+      await loadInvites();
+    } catch {} finally {
+      setInviteLoading((p) => ({ ...p, [inviteId]: null }));
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId) => {
+    setInviteLoading((p) => ({ ...p, [inviteId]: 'decline' }));
+    try {
+      await api.delete(`/households/invites/${inviteId}`);
+      await loadInvites();
+    } catch {} finally {
+      setInviteLoading((p) => ({ ...p, [inviteId]: null }));
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -67,6 +100,36 @@ export default function GroupsPage() {
         </div>
 
         {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg mb-4">{error}</p>}
+
+        {invites.length > 0 && (
+          <div className="mb-4 space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Bell size={12} /> Pending Invites
+            </p>
+            {invites.map((inv) => (
+              <div key={inv._id} className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+                <p className="text-sm font-medium text-gray-800">{inv.household_id?.name}</p>
+                <p className="text-xs text-gray-500 mb-3">Invited by {inv.inviter_id?.name} ({inv.inviter_id?.email})</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDeclineInvite(inv._id)}
+                    disabled={!!inviteLoading[inv._id]}
+                    className="flex-1 border border-gray-300 text-gray-600 py-1.5 rounded-lg text-sm disabled:opacity-60"
+                  >
+                    {inviteLoading[inv._id] === 'decline' ? 'Declining...' : 'Decline'}
+                  </button>
+                  <button
+                    onClick={() => handleAcceptInvite(inv._id)}
+                    disabled={!!inviteLoading[inv._id]}
+                    className="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-sm font-semibold disabled:opacity-60"
+                  >
+                    {inviteLoading[inv._id] === 'accept' ? 'Joining...' : 'Accept'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {mode === 'create' && (
           <form onSubmit={handleCreate} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 space-y-3">

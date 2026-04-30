@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Users, HandCoins, Receipt, ShoppingCart, CheckSquare, MessageSquare } from 'lucide-react';
+import { Home, Users, HandCoins, Receipt, ShoppingCart, CheckSquare, MessageSquare, UserCheck } from 'lucide-react';
 
 export default function NavBar() {
   const location = useLocation();
@@ -12,6 +12,7 @@ export default function NavBar() {
       { to: `/groups/${groupId}/shopping`, label: 'Shopping', Icon: ShoppingCart },
       { to: `/groups/${groupId}/chores`, label: 'Chores', Icon: CheckSquare },
       { to: `/groups/${groupId}/messages`, label: 'Chat', Icon: MessageSquare },
+      { to: `/groups/${groupId}/members`, label: 'Members', Icon: UserCheck },
     ];
     return (
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
