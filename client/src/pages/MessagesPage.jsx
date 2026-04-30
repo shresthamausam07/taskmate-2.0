@@ -20,7 +20,9 @@ export default function MessagesPage() {
   useEffect(() => {
     api.get(`/messages/${groupId}`).then(({ data }) => setMessages(data)).catch(() => {});
     socket.emit('join:room', groupId);
-    socket.on('message:new', (msg) => setMessages((prev) => [...prev, msg]));
+    socket.on('message:new', (msg) =>
+      setMessages((prev) => prev.some((m) => m._id === msg._id) ? prev : [...prev, msg])
+    );
     return () => socket.off('message:new');
   }, [groupId]);
 
@@ -34,7 +36,8 @@ export default function MessagesPage() {
     const content = text.trim();
     setText('');
     try {
-      await api.post('/messages', { household_id: groupId, content });
+      const { data } = await api.post('/messages', { household_id: groupId, content });
+      setMessages((prev) => [...prev, data]);
     } catch {}
   };
 
