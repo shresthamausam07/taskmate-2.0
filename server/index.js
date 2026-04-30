@@ -23,6 +23,8 @@ app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/shopping', require('./routes/shopping'));
 app.use('/api/chores', require('./routes/chores'));
 app.use('/api/messages', require('./routes/messages'));
+app.use('/api/friends', require('./routes/friends'));
+app.use('/api/splits', require('./routes/splits'));
 
 io.on('connection', (socket) => {
   socket.on('join:room', (roomId) => socket.join(roomId));
