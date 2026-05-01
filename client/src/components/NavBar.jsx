@@ -1,10 +1,19 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Users, HandCoins, Receipt, ShoppingCart, CheckSquare, MessageSquare, UserCheck } from 'lucide-react';
+import api from '../services/api';
 
 export default function NavBar() {
   const location = useLocation();
   const groupMatch = location.pathname.match(/^\/groups\/([^/]+)/);
   const groupId = groupMatch?.[1];
+
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (groupId) return;
+    api.get('/friends/requests').then(({ data }) => setPendingCount(data.length)).catch(() => {});
+  }, [location.pathname]);
 
   if (groupId) {
     const tabs = [
@@ -53,7 +62,14 @@ export default function NavBar() {
           >
             {({ isActive }) => (
               <>
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.75} />
+                <div className="relative">
+                  <Icon size={20} strokeWidth={isActive ? 2.5 : 1.75} />
+                  {label === 'Friends' && pendingCount > 0 && (
+                    <span className="absolute -top-1 -right-1.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">
+                      {pendingCount > 9 ? '9+' : pendingCount}
+                    </span>
+                  )}
+                </div>
                 {label}
               </>
             )}
