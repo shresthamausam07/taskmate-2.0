@@ -11,13 +11,17 @@ export default function DashboardPage() {
   const { households } = useHousehold();
   const navigate = useNavigate();
   const [friendBalances, setFriendBalances] = useState([]);
+  const [groupBalance, setGroupBalance] = useState(0);
 
   useEffect(() => {
     api.get('/friends/balances').then(({ data }) => setFriendBalances(data)).catch(() => {});
+    api.get('/expenses/group-balance').then(({ data }) => setGroupBalance(data.balance)).catch(() => {});
   }, []);
 
-  const totalOwed = friendBalances.filter((b) => b.balance > 0).reduce((s, b) => s + b.balance, 0);
-  const totalOwe = friendBalances.filter((b) => b.balance < 0).reduce((s, b) => s + Math.abs(b.balance), 0);
+  const friendOwed = friendBalances.filter((b) => b.balance > 0).reduce((s, b) => s + b.balance, 0);
+  const friendOwe = friendBalances.filter((b) => b.balance < 0).reduce((s, b) => s + Math.abs(b.balance), 0);
+  const totalOwed = friendOwed + (groupBalance > 0 ? groupBalance : 0);
+  const totalOwe = friendOwe + (groupBalance < 0 ? Math.abs(groupBalance) : 0);
   const netBalance = totalOwed - totalOwe;
 
   return (

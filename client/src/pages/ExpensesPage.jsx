@@ -34,12 +34,14 @@ export default function ExpensesPage() {
   const myBalance = () => {
     let bal = 0;
     expenses.forEach((exp) => {
-      const mySplit = exp.splits?.find((s) => s.user_id?._id === user?._id);
-      if (!mySplit || mySplit.is_paid) return;
-      if (exp.payer_id?._id === user?._id) {
-        bal += exp.amount - mySplit.amount_owed;
+      const iAmPayer = exp.payer_id?._id === user?._id;
+      if (iAmPayer) {
+        exp.splits?.forEach((s) => {
+          if (s.user_id?._id !== user?._id && !s.is_paid) bal += s.amount_owed;
+        });
       } else {
-        bal -= mySplit.amount_owed;
+        const mySplit = exp.splits?.find((s) => s.user_id?._id === user?._id);
+        if (mySplit && !mySplit.is_paid) bal -= mySplit.amount_owed;
       }
     });
     return bal;

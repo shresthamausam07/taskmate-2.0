@@ -6,6 +6,40 @@ const Household = require('../models/Household');
 
 router.use(auth);
 
+// Net balance across all group expenses for the current user
+router.get('/group-balance', async (req, res) => {
+  try {
+    const households = await Household.find({ members: req.user.id });
+    const householdIds = households.map((h) => h._id);
+    const expenses = await Expense.find({ household_id: { $in: householdIds } });
+    const expenseIds = expenses.map((e) => e._id);
+    const splits = await ExpenseSplit.find({ expense_id: { $in: expenseIds } });
+
+    let balance = 0;
+    expenses.forEach((exp) => {
+      const iAmPayer = exp.payer_id.toString() === req.user.id;
+      if (iAmPayer) {
+        splits.forEach((s) => {
+          if (s.expense_id.toString() === exp._id.toString() &&
+              s.user_id.toString() !== req.user.id &&
+              !s.is_paid) {
+            balance += s.amount_owed;
+          }
+        });
+      } else {
+        const mySplit = splits.find(
+          (s) => s.expense_id.toString() === exp._id.toString() && s.user_id.toString() === req.user.id
+        );
+        if (mySplit && !mySplit.is_paid) balance -= mySplit.amount_owed;
+      }
+    });
+
+    res.json({ balance });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get('/:householdId', async (req, res) => {
   try {
     const expenses = await Expense.find({ household_id: req.params.householdId })
