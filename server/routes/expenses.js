@@ -106,4 +106,18 @@ router.put('/splits/:splitId/pay', async (req, res) => {
   }
 });
 
+router.put('/settle-all/:householdId', async (req, res) => {
+  try {
+    const expenses = await Expense.find({ household_id: req.params.householdId });
+    const expenseIds = expenses.map((e) => e._id);
+    await ExpenseSplit.updateMany(
+      { expense_id: { $in: expenseIds }, user_id: req.user.id, is_paid: false },
+      { is_paid: true }
+    );
+    res.json({ message: 'Settled' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

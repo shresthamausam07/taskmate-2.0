@@ -94,6 +94,13 @@ export default function ExpensesPage() {
     } catch {}
   };
 
+  const handleSettleAll = async () => {
+    try {
+      await api.put(`/expenses/settle-all/${groupId}`);
+      load();
+    } catch {}
+  };
+
   const balance = myBalance();
 
   return (
@@ -116,9 +123,21 @@ export default function ExpensesPage() {
         </div>
 
         <div className={`rounded-2xl p-4 mb-4 text-white ${balance > 0 ? 'bg-green-600' : balance < 0 ? 'bg-red-500' : 'bg-gray-500'}`}>
-          {balance > 0 && <p className="font-bold">You are owed ${balance.toFixed(2)}</p>}
-          {balance < 0 && <p className="font-bold">You owe ${Math.abs(balance).toFixed(2)}</p>}
-          {balance === 0 && <p className="font-bold">All settled up</p>}
+          <div className="flex items-center justify-between">
+            <div>
+              {balance > 0 && <p className="font-bold">You are owed ${balance.toFixed(2)}</p>}
+              {balance < 0 && <p className="font-bold">You owe ${Math.abs(balance).toFixed(2)}</p>}
+              {balance === 0 && <p className="font-bold">All settled up</p>}
+            </div>
+            {balance < 0 && (
+              <button
+                onClick={handleSettleAll}
+                className="bg-white text-red-500 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                Settle All
+              </button>
+            )}
+          </div>
         </div>
 
         {showForm && (
