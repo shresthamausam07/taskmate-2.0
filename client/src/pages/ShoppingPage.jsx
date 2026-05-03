@@ -62,6 +62,12 @@ export default function ShoppingPage() {
     } catch {}
   };
 
+  const clearChecked = async () => {
+    try {
+      await api.delete(`/shopping/checked/${groupId}`);
+    } catch {}
+  };
+
   const pending = items.filter((i) => !i.is_checked);
   const checked = items.filter((i) => i.is_checked);
 
@@ -125,7 +131,12 @@ export default function ShoppingPage() {
 
         {checked.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Checked off</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Checked off ({checked.length})</p>
+              <button onClick={clearChecked} className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
+                Clear all
+              </button>
+            </div>
             <div className="space-y-2">
               {checked.map((item) => (
                 <div key={item._id} className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-100 flex items-center gap-3 opacity-60">

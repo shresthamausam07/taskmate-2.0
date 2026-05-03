@@ -37,6 +37,18 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+router.delete('/checked/:householdId', async (req, res) => {
+  try {
+    const items = await ShoppingItem.find({ household_id: req.params.householdId, is_checked: true });
+    await ShoppingItem.deleteMany({ household_id: req.params.householdId, is_checked: true });
+    const io = req.app.get('io');
+    items.forEach((item) => io.to(req.params.householdId).emit('shopping:delete', item._id));
+    res.json({ message: 'Cleared' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     const item = await ShoppingItem.findByIdAndDelete(req.params.id);
