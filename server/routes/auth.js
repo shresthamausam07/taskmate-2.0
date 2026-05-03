@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const auth = require('../middleware/auth');
 
 const sign = (user) =>
   jwt.sign({ id: user._id, name: user.name, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -27,6 +28,35 @@ router.post('/login', async (req, res) => {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
     res.json({ token: sign(user), user: { _id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const { name, email, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (name) user.name = name;
+
+    if (email && email.toLowerCase() !== user.email) {
+      const taken = await User.findOne({ email: email.toLowerCase() });
+      if (taken) return res.status(400).json({ message: 'Email already in use' });
+      user.email = email.toLowerCase();
+    }
+
+    if (newPassword) {
+      if (!currentPassword) return res.status(400).json({ message: 'Current password is required' });
+      const ok = await user.comparePassword(currentPassword);
+      if (!ok) return res.status(401).json({ message: 'Current password is incorrect' });
+      user.password_hash = newPassword;
+    }
+
+    await user.save();
+    const token = sign(user);
+    res.json({ token, user: { _id: user._id, name: user.name, email: user.email } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

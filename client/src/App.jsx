@@ -9,6 +9,7 @@ import GroupsPage from './pages/GroupsPage';
 import GroupDetailPage from './pages/GroupDetailPage';
 import FriendsPage from './pages/FriendsPage';
 import FriendDetailPage from './pages/FriendDetailPage';
+import ProfilePage from './pages/ProfilePage';
 
 function AppRoutes() {
   return (
@@ -20,6 +21,7 @@ function AppRoutes() {
       <Route path="/groups/:groupId/*" element={<ProtectedRoute><GroupDetailPage /></ProtectedRoute>} />
       <Route path="/friends" element={<ProtectedRoute><FriendsPage /></ProtectedRoute>} />
       <Route path="/friends/:friendId" element={<ProtectedRoute><FriendDetailPage /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Settings } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
 import NavBar from '../components/NavBar';
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { households } = useHousehold();
   const navigate = useNavigate();
   const [friendBalances, setFriendBalances] = useState([]);
@@ -33,8 +33,8 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-gray-900">Hi, {user?.name?.split(' ')[0]}</h1>
             <p className="text-sm text-gray-400">Welcome back to TaskMate</p>
           </div>
-          <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Sign out
+          <button onClick={() => navigate('/profile')} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <Settings size={20} />
           </button>
         </div>
 
