@@ -87,6 +87,39 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.put('/:id', async (req, res) => {
+  try {
+    const { amount, description, category, paid_by_id, split_among } = req.body;
+    const expense = await Expense.findById(req.params.id);
+    if (!expense) return res.status(404).json({ message: 'Not found' });
+
+    if (description) expense.description = description;
+    if (amount)      expense.amount = parseFloat(amount);
+    if (category)    expense.category = category;
+    if (paid_by_id)  expense.payer_id = paid_by_id;
+    await expense.save();
+
+    const payer = expense.payer_id.toString();
+    const memberIds = split_among && split_among.length > 0
+      ? split_among
+      : (await Household.findById(expense.household_id))?.members.map((m) => m.toString()) || [];
+
+    await ExpenseSplit.deleteMany({ expense_id: expense._id });
+    const splitAmount = parseFloat((expense.amount / memberIds.length).toFixed(2));
+    await ExpenseSplit.insertMany(memberIds.map((memberId) => ({
+      expense_id: expense._id,
+      user_id: memberId,
+      amount_owed: splitAmount,
+      is_paid: memberId.toString() === payer,
+    })));
+
+    await expense.populate('payer_id', 'name email');
+    res.json(expense);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await Expense.findByIdAndDelete(req.params.id);

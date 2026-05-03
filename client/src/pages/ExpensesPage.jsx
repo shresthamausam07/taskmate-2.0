@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
@@ -21,6 +21,11 @@ export default function ExpensesPage() {
   const [splitAmong, setSplitAmong] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ description: '', amount: '', category: 'general', paid_by_id: '' });
+  const [editSplitAmong, setEditSplitAmong] = useState([]);
+  const [editLoading, setEditLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -92,6 +97,36 @@ export default function ExpensesPage() {
       await api.put(`/expenses/splits/${splitId}/pay`);
       load();
     } catch {}
+  };
+
+  const openEdit = (exp) => {
+    setEditingId(exp._id);
+    setEditForm({
+      description: exp.description,
+      amount: String(exp.amount),
+      category: exp.category || 'general',
+      paid_by_id: exp.payer_id?._id || '',
+    });
+    setEditSplitAmong(exp.splits?.map((s) => s.user_id?._id).filter(Boolean) || []);
+  };
+
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    if (editSplitAmong.length === 0) return;
+    setEditLoading(true);
+    try {
+      await api.put(`/expenses/${editingId}`, {
+        description: editForm.description,
+        amount: parseFloat(editForm.amount),
+        category: editForm.category,
+        paid_by_id: editForm.paid_by_id || user._id,
+        split_among: editSplitAmong,
+      });
+      setEditingId(null);
+      load();
+    } catch {} finally {
+      setEditLoading(false);
+    }
   };
 
   const handleSettleAll = async () => {
@@ -214,6 +249,65 @@ export default function ExpensesPage() {
           )}
           {expenses.map((exp) => {
             const mySplit = exp.splits?.find((s) => s.user_id?._id === user?._id);
+            const iAmPayer = exp.payer_id?._id === user?._id;
+
+            if (editingId === exp._id) {
+              return (
+                <form key={exp._id} onSubmit={handleEdit} className="bg-white rounded-2xl p-4 shadow-sm border border-indigo-200 space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Edit Expense</p>
+                  <input type="text" value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    required autoFocus
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  <input type="number" value={editForm.amount}
+                    onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                    required min="0.01" step="0.01"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                  <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white capitalize">
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Who paid?</p>
+                    <select value={editForm.paid_by_id} onChange={(e) => setEditForm({ ...editForm, paid_by_id: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white">
+                      <option value="">You</option>
+                      {household?.members?.filter((m) => m._id !== user?._id).map((m) => (
+                        <option key={m._id} value={m._id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Split among ({editSplitAmong.length} of {household?.members?.length || 1})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {household?.members?.map((m) => {
+                        const selected = editSplitAmong.includes(m._id);
+                        return (
+                          <button key={m._id} type="button"
+                            onClick={() => setEditSplitAmong((prev) => selected ? prev.filter((id) => id !== m._id) : [...prev, m._id])}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${selected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-300'}`}>
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${selected ? 'bg-white text-indigo-600' : 'bg-gray-200 text-gray-500'}`}>
+                              {m.name[0]?.toUpperCase()}
+                            </span>
+                            {m._id === user?._id ? 'You' : m.name.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {editSplitAmong.length > 0 && editForm.amount && (
+                      <p className="text-xs text-gray-400 mt-1.5">${(parseFloat(editForm.amount) / editSplitAmong.length).toFixed(2)} each</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setEditingId(null)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm">Cancel</button>
+                    <button type="submit" disabled={editLoading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-60">
+                      {editLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              );
+            }
+
             return (
               <div key={exp._id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start">
@@ -228,7 +322,14 @@ export default function ExpensesPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-lg font-bold text-gray-900 ml-2">${parseFloat(exp.amount).toFixed(2)}</p>
+                  <div className="flex items-center gap-2 ml-2">
+                    {iAmPayer && (
+                      <button onClick={() => openEdit(exp)} className="text-gray-300 hover:text-indigo-500 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                    <p className="text-lg font-bold text-gray-900">${parseFloat(exp.amount).toFixed(2)}</p>
+                  </div>
                 </div>
                 {mySplit && (
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
