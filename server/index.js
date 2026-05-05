@@ -8,7 +8,11 @@ const cors = require('cors');
 const app = express();
 const httpServer = http.createServer(app);
 
-const ALLOWED_ORIGINS = ['http://localhost:3000', 'http://localhost:5173'];
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://taskmate-2-0.vercel.app',
+];
 
 const io = new Server(httpServer, {
   cors: { origin: ALLOWED_ORIGINS, methods: ['GET', 'POST'] },
