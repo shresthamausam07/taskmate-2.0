@@ -31,7 +31,8 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try { await api.post('/auth/logout'); } catch {}
     localStorage.removeItem('tm_token');
     localStorage.removeItem('tm_user');
     setUser(null);

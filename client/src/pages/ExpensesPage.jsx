@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, BarChart2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
@@ -26,6 +26,8 @@ export default function ExpensesPage() {
   const [editForm, setEditForm] = useState({ description: '', amount: '', category: 'general', paid_by_id: '' });
   const [editSplitAmong, setEditSplitAmong] = useState([]);
   const [editLoading, setEditLoading] = useState(false);
+
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const load = async () => {
     try {
@@ -138,6 +140,21 @@ export default function ExpensesPage() {
 
   const balance = myBalance();
 
+  const categoryTotals = CATEGORIES.map((cat) => {
+    const total = expenses
+      .filter((e) => (e.category || 'general') === cat)
+      .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+    return { cat, total };
+  }).filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
+
+  const grandTotal = categoryTotals.reduce((sum, c) => sum + c.total, 0);
+
+  const CATEGORY_COLORS = {
+    food: 'bg-orange-400', housing: 'bg-blue-400', transport: 'bg-yellow-400',
+    utilities: 'bg-purple-400', entertainment: 'bg-pink-400', health: 'bg-green-400',
+    other: 'bg-gray-400', general: 'bg-indigo-400',
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       <NavBar />
@@ -150,6 +167,12 @@ export default function ExpensesPage() {
             <h1 className="text-xl font-bold text-gray-900">{household?.name || 'Group'}</h1>
             <p className="text-xs text-gray-400">Expenses</p>
           </div>
+          {expenses.length > 0 && (
+            <button onClick={() => setShowAnalytics(!showAnalytics)}
+              className={`p-2 rounded-lg transition-colors ${showAnalytics ? 'bg-indigo-100 text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
+              <BarChart2 size={20} />
+            </button>
+          )}
           <button onClick={() => showForm ? setShowForm(false) : openForm()}
             className="bg-indigo-600 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-semibold">
             <Plus size={15} />
@@ -174,6 +197,29 @@ export default function ExpensesPage() {
             )}
           </div>
         </div>
+
+        {showAnalytics && categoryTotals.length > 0 && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Spending by Category</p>
+            <div className="space-y-2.5">
+              {categoryTotals.map(({ cat, total }) => (
+                <div key={cat}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-medium text-gray-600 capitalize">{cat}</span>
+                    <span className="text-xs text-gray-500">${total.toFixed(2)} · {((total / grandTotal) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div
+                      className={`${CATEGORY_COLORS[cat] || 'bg-indigo-400'} h-2 rounded-full transition-all`}
+                      style={{ width: `${(total / grandTotal) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-right">Total spent: ${grandTotal.toFixed(2)}</p>
+          </div>
+        )}
 
         {showForm && (
           <form onSubmit={handleAdd} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4 space-y-3">

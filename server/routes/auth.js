@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const TokenBlacklist = require('../models/TokenBlacklist');
 const auth = require('../middleware/auth');
 
 const sign = (user) =>
@@ -28,6 +29,18 @@ router.post('/login', async (req, res) => {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
     res.json({ token: sign(user), user: { _id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/logout', auth, async (req, res) => {
+  try {
+    const token = req.headers.authorization.slice(7);
+    const decoded = jwt.decode(token);
+    const expiresAt = new Date(decoded.exp * 1000);
+    await TokenBlacklist.create({ token, expiresAt });
+    res.json({ message: 'Logged out' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
