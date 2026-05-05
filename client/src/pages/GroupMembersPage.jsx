@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Copy, Check, UserPlus, LogOut, Trash2, ArrowLeft, Users } from 'lucide-react';
+import { Copy, Check, UserPlus, LogOut, Trash2, ArrowLeft, Pencil } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
@@ -24,6 +24,10 @@ export default function GroupMembersPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [confirmAction, setConfirmAction] = useState(false);
+
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
 
   useEffect(() => {
     api.get(`/households/${groupId}`)
@@ -54,6 +58,22 @@ export default function GroupMembersPage() {
   };
 
   const isCreator = household && user && household.created_by?.toString() === user._id;
+
+  const handleRename = async (e) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setRenameLoading(true);
+    try {
+      const { data } = await api.put(`/households/${groupId}`, { name: newName.trim() });
+      setHousehold(data);
+      await loadAll();
+      setRenaming(false);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Could not rename group');
+    } finally {
+      setRenameLoading(false);
+    }
+  };
 
   const handleLeave = async () => {
     setActionError('');
@@ -113,7 +133,36 @@ export default function GroupMembersPage() {
           <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold flex-shrink-0">
             {household.name[0]?.toUpperCase()}
           </div>
-          <h1 className="text-xl font-bold text-gray-900">{household.name}</h1>
+          {renaming ? (
+            <form onSubmit={handleRename} className="flex-1 flex gap-2">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                autoFocus
+                required
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <button type="submit" disabled={renameLoading}
+                className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-semibold disabled:opacity-60">
+                {renameLoading ? '...' : 'Save'}
+              </button>
+              <button type="button" onClick={() => setRenaming(false)}
+                className="border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg text-sm">
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <div className="flex items-center gap-2 flex-1">
+              <h1 className="text-xl font-bold text-gray-900">{household.name}</h1>
+              {isCreator && (
+                <button onClick={() => { setNewName(household.name); setRenaming(true); }}
+                  className="text-gray-300 hover:text-indigo-500 transition-colors">
+                  <Pencil size={15} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Invite Code */}

@@ -170,6 +170,25 @@ router.post('/:id/invite', async (req, res) => {
   }
 });
 
+// Rename group — only the creator can do this
+router.put('/:id', async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name?.trim()) return res.status(400).json({ message: 'Name required' });
+    const h = await Household.findById(req.params.id);
+    if (!h) return res.status(404).json({ message: 'Group not found' });
+    if (h.created_by.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Only the group creator can rename this group' });
+    }
+    h.name = name.trim();
+    await h.save();
+    await h.populate('members', 'name email');
+    res.json(h);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Delete group — only the creator can do this (cascade deletes all related data)
 router.delete('/:id', async (req, res) => {
   try {
