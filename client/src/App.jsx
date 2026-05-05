@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { HouseholdProvider } from './context/HouseholdContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -11,11 +12,16 @@ import FriendsPage from './pages/FriendsPage';
 import FriendDetailPage from './pages/FriendDetailPage';
 import ProfilePage from './pages/ProfilePage';
 
+function GuestRoute({ children }) {
+  const { user } = useAuth();
+  return user ? <Navigate to="/dashboard" replace /> : children;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
       <Route path="/groups/:groupId/*" element={<ProtectedRoute><GroupDetailPage /></ProtectedRoute>} />
