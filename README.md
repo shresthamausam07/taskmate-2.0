@@ -14,7 +14,7 @@ The app supports user accounts with JWT-based authentication, protected routes o
 
 ## Demo Video
 
-[Add link here]
+https://drive.google.com/drive/folders/1La4r9pXmvGv_iOE_iF81TXfWi8caaCB_?usp=drive_link 
 
 ## Tech Stack
 
