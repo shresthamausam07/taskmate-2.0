@@ -30,6 +30,7 @@ export default function ExpensesPage() {
   const [editLoading, setEditLoading] = useState(false);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [receiptModal, setReceiptModal] = useState(null);
 
   const load = async () => {
     try {
@@ -172,6 +173,7 @@ export default function ExpensesPage() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50 pb-24">
       <NavBar />
       <div className="max-w-md mx-auto px-4 pt-6">
@@ -407,12 +409,10 @@ export default function ExpensesPage() {
                   </div>
                 </div>
                 {exp.receipt_url && (
-                  <div className="mt-3">
-                    <a href={exp.receipt_url} target="_blank" rel="noopener noreferrer">
-                      <img src={exp.receipt_url} alt="Receipt"
-                        className="w-full max-h-48 object-cover rounded-xl border border-gray-100" />
-                    </a>
-                  </div>
+                  <button onClick={() => setReceiptModal(exp.receipt_url)}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:underline">
+                    📎 View Receipt
+                  </button>
                 )}
                 {mySplit && (
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
@@ -433,5 +433,19 @@ export default function ExpensesPage() {
         </div>
       </div>
     </div>
+
+    {receiptModal && (
+      <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+        onClick={() => setReceiptModal(null)}>
+        <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => setReceiptModal(null)}
+            className="absolute -top-10 right-0 text-white text-sm font-semibold opacity-80 hover:opacity-100">
+            ✕ Close
+          </button>
+          <img src={receiptModal} alt="Receipt" className="w-full rounded-2xl shadow-xl" />
+        </div>
+      </div>
+    )}
+    </>
   );
 }
