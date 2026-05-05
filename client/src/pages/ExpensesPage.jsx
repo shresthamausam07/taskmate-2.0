@@ -18,6 +18,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ description: '', amount: '', category: 'general', paid_by_id: '' });
+  const [receipt, setReceipt] = useState(null);
   const [splitAmong, setSplitAmong] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,7 @@ export default function ExpensesPage() {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ description: '', amount: '', category: 'general', paid_by_id: '' });
   const [editSplitAmong, setEditSplitAmong] = useState([]);
+  const [editReceipt, setEditReceipt] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -54,9 +56,17 @@ export default function ExpensesPage() {
     return bal;
   };
 
+  const toBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const openForm = () => {
     setSplitAmong(household?.members?.map((m) => m._id) || []);
     setForm({ description: '', amount: '', category: 'general', paid_by_id: '' });
+    setReceipt(null);
     setError('');
     setShowForm(true);
   };
@@ -76,6 +86,7 @@ export default function ExpensesPage() {
     setError('');
     setLoading(true);
     try {
+      const receipt_url = receipt ? await toBase64(receipt) : null;
       await api.post('/expenses', {
         household_id: groupId,
         amount: parseFloat(form.amount),
@@ -83,8 +94,10 @@ export default function ExpensesPage() {
         category: form.category,
         paid_by_id: form.paid_by_id || user._id,
         split_among: splitAmong,
+        receipt_url,
       });
       setForm({ description: '', amount: '', category: 'general', paid_by_id: '' });
+      setReceipt(null);
       setShowForm(false);
       load();
     } catch (err) {
@@ -110,6 +123,7 @@ export default function ExpensesPage() {
       paid_by_id: exp.payer_id?._id || '',
     });
     setEditSplitAmong(exp.splits?.map((s) => s.user_id?._id).filter(Boolean) || []);
+    setEditReceipt(null);
   };
 
   const handleEdit = async (e) => {
@@ -117,12 +131,14 @@ export default function ExpensesPage() {
     if (editSplitAmong.length === 0) return;
     setEditLoading(true);
     try {
+      const receipt_url = editReceipt ? await toBase64(editReceipt) : undefined;
       await api.put(`/expenses/${editingId}`, {
         description: editForm.description,
         amount: parseFloat(editForm.amount),
         category: editForm.category,
         paid_by_id: editForm.paid_by_id || user._id,
         split_among: editSplitAmong,
+        ...(receipt_url !== undefined && { receipt_url }),
       });
       setEditingId(null);
       load();
@@ -278,6 +294,13 @@ export default function ExpensesPage() {
                 </p>
               )}
             </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Receipt (optional)</p>
+              <input type="file" accept="image/*"
+                onChange={(e) => setReceipt(e.target.files[0] || null)}
+                className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100" />
+              {receipt && <p className="text-xs text-gray-400 mt-1">{receipt.name}</p>}
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm">Cancel</button>
               <button type="submit" disabled={loading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-60">
@@ -344,6 +367,12 @@ export default function ExpensesPage() {
                       <p className="text-xs text-gray-400 mt-1.5">${(parseFloat(editForm.amount) / editSplitAmong.length).toFixed(2)} each</p>
                     )}
                   </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Replace receipt (optional)</p>
+                    <input type="file" accept="image/*"
+                      onChange={(e) => setEditReceipt(e.target.files[0] || null)}
+                      className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100" />
+                  </div>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setEditingId(null)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm">Cancel</button>
                     <button type="submit" disabled={editLoading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-60">
@@ -377,6 +406,14 @@ export default function ExpensesPage() {
                     <p className="text-lg font-bold text-gray-900">${parseFloat(exp.amount).toFixed(2)}</p>
                   </div>
                 </div>
+                {exp.receipt_url && (
+                  <div className="mt-3">
+                    <a href={exp.receipt_url} target="_blank" rel="noopener noreferrer">
+                      <img src={exp.receipt_url} alt="Receipt"
+                        className="w-full max-h-48 object-cover rounded-xl border border-gray-100" />
+                    </a>
+                  </div>
+                )}
                 {mySplit && (
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                     <p className="text-sm text-gray-600">Your share: ${parseFloat(mySplit.amount_owed).toFixed(2)}</p>

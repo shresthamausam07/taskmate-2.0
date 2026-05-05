@@ -59,12 +59,12 @@ router.get('/:householdId', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { household_id, amount, description, category, paid_by_id, split_among } = req.body;
+    const { household_id, amount, description, category, paid_by_id, split_among, receipt_url } = req.body;
     const household = await Household.findById(household_id);
     if (!household) return res.status(404).json({ message: 'Group not found' });
 
     const payer = paid_by_id || req.user.id;
-    const expense = await Expense.create({ household_id, payer_id: payer, amount, description, category });
+    const expense = await Expense.create({ household_id, payer_id: payer, amount, description, category, receipt_url: receipt_url || null });
 
     // Use provided split_among list, or fall back to all household members
     const memberIds = (split_among && split_among.length > 0)
@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { amount, description, category, paid_by_id, split_among } = req.body;
+    const { amount, description, category, paid_by_id, split_among, receipt_url } = req.body;
     const expense = await Expense.findById(req.params.id);
     if (!expense) return res.status(404).json({ message: 'Not found' });
 
@@ -97,6 +97,7 @@ router.put('/:id', async (req, res) => {
     if (amount)      expense.amount = parseFloat(amount);
     if (category)    expense.category = category;
     if (paid_by_id)  expense.payer_id = paid_by_id;
+    if (receipt_url !== undefined) expense.receipt_url = receipt_url;
     await expense.save();
 
     const payer = expense.payer_id.toString();

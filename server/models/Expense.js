@@ -12,6 +12,7 @@ const expenseSchema = new mongoose.Schema({
   },
   date: { type: Date, default: Date.now },
   type: { type: String, enum: ['expense', 'settlement'], default: 'expense' },
+  receipt_url: { type: String, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Expense', expenseSchema);
