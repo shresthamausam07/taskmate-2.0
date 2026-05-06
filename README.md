@@ -14,7 +14,7 @@ The app supports user accounts with JWT-based authentication, protected routes o
 
 ## Demo Video
 
-https://drive.google.com/drive/folders/1La4r9pXmvGv_iOE_iF81TXfWi8caaCB_?usp=drive_link 
+https://drive.google.com/drive/folders/1La4r9pXmvGv_iOE_iF81TXfWi8caaCB_?usp=drive_link
 
 ## Tech Stack
 
@@ -30,7 +30,7 @@ https://drive.google.com/drive/folders/1La4r9pXmvGv_iOE_iF81TXfWi8caaCB_?usp=dri
 
 ### 1. Clone the repo
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/shresthamausam07/taskmate-2.0.git
 cd taskmate-2.0
 ```
 
@@ -96,204 +96,686 @@ Password: test123
 
 ## API Documentation
 
-All routes except `/api/auth/register` and `/api/auth/login` require a Bearer token in the `Authorization` header.
+All routes except `/api/auth/register` and `/api/auth/login` require an `Authorization: Bearer <token>` header.
 
 ---
 
 ### Auth — `/api/auth`
 
+---
+
 **POST /api/auth/register**  
-Register a new account.  
-Body: `{ name, email, password }`  
-Returns: `{ token, user }`  
-Errors: 400 if fields missing or email taken
+Register a new user account.  
+Auth required: No
+
+Request body:
+```json
+{ "name": "John Doe", "email": "john@example.com", "password": "secret123" }
+```
+
+Example response (201):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "_id": "664abc...", "name": "John Doe", "email": "john@example.com" }
+}
+```
+
+Errors: `400` fields missing, `400` email already in use
+
+---
 
 **POST /api/auth/login**  
 Log in with email and password.  
-Body: `{ email, password }`  
-Returns: `{ token, user }`  
-Errors: 401 if credentials are wrong
+Auth required: No
+
+Request body:
+```json
+{ "email": "john@example.com", "password": "secret123" }
+```
+
+Example response (200):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "_id": "664abc...", "name": "John Doe", "email": "john@example.com" }
+}
+```
+
+Errors: `401` invalid credentials
+
+---
 
 **POST /api/auth/logout**  
-Blacklists the current token so it can't be reused.  
-Returns: `{ message: "Logged out" }`
+Blacklists the current token so it cannot be reused.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Logged out" }
+```
+
+---
 
 **PUT /api/auth/profile**  
 Update name, email, or password.  
-Body: `{ name?, email?, currentPassword?, newPassword? }`  
-Returns: `{ token, user }` (new token issued if name/email changed)  
-Errors: 400 if email taken, 401 if currentPassword is wrong
+Auth required: Yes
+
+Request body:
+```json
+{ "name": "New Name", "email": "new@example.com", "currentPassword": "old123", "newPassword": "new456" }
+```
+
+Example response (200):
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "user": { "_id": "664abc...", "name": "New Name", "email": "new@example.com" }
+}
+```
+
+Errors: `400` email taken, `401` current password incorrect
 
 ---
 
 ### Households (Groups) — `/api/households`
 
+---
+
 **GET /api/households**  
 Get all groups the current user belongs to.  
-Returns: array of household objects with populated members
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  {
+    "_id": "665abc...",
+    "name": "Apartment 4B",
+    "invite_code": "A3F9C2",
+    "created_by": "664abc...",
+    "members": [{ "_id": "664abc...", "name": "John Doe", "email": "john@example.com" }]
+  }
+]
+```
+
+---
 
 **POST /api/households**  
 Create a new group.  
-Body: `{ name }`  
-Returns: the created household
+Auth required: Yes
+
+Request body:
+```json
+{ "name": "Apartment 4B" }
+```
+
+Example response (201):
+```json
+{ "_id": "665abc...", "name": "Apartment 4B", "invite_code": "A3F9C2", "members": [...] }
+```
+
+Errors: `400` name required
+
+---
 
 **GET /api/households/:id**  
-Get a single group by ID including members, invite code.
+Get a single group by ID.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "665abc...", "name": "Apartment 4B", "invite_code": "A3F9C2", "members": [...] }
+```
+
+Errors: `404` group not found
+
+---
 
 **PUT /api/households/:id**  
 Rename a group. Creator only.  
-Body: `{ name }`  
-Errors: 403 if not the creator
+Auth required: Yes
+
+Request body:
+```json
+{ "name": "New Group Name" }
+```
+
+Example response (200):
+```json
+{ "_id": "665abc...", "name": "New Group Name", "members": [...] }
+```
+
+Errors: `403` not the creator, `400` name required
+
+---
 
 **DELETE /api/households/:id**  
-Delete a group and all its expenses, chores, messages, and shopping items. Creator only.  
-Errors: 403 if not the creator
+Delete a group and all related data (expenses, chores, messages, shopping items). Creator only.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Group deleted" }
+```
+
+Errors: `403` not the creator
+
+---
 
 **POST /api/households/join/:code**  
 Join a group using its invite code.  
-Returns: the household
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "665abc...", "name": "Apartment 4B", "members": [...] }
+```
+
+Errors: `404` invalid invite code
+
+---
 
 **POST /api/households/:id/leave**  
-Leave a group. Blocked if user has unsettled balances.  
-Errors: 400 with message if balances exist
+Leave a group. Blocked if unsettled balances exist.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Left group" }
+```
+
+Errors: `400` unsettled balances exist
+
+---
 
 **POST /api/households/:id/invite**  
-Send an in-app invite to another registered user by email.  
-Body: `{ email }`  
-Errors: 404 if user not found, 400 if already a member or invite already sent, 403 if not a member
+Send an in-app invite to a registered user by email.  
+Auth required: Yes
+
+Request body:
+```json
+{ "email": "friend@example.com" }
+```
+
+Example response (200):
+```json
+{ "message": "Invite sent to Jane Smith" }
+```
+
+Errors: `404` user not found, `400` already a member or invite already sent, `403` not a group member
+
+---
 
 **GET /api/households/invites**  
 Get all pending group invites for the current user.  
-Returns: array of invites with group name and inviter info
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  {
+    "_id": "667abc...",
+    "household_id": { "_id": "665abc...", "name": "Apartment 4B" },
+    "inviter_id": { "name": "John Doe", "email": "john@example.com" },
+    "status": "pending"
+  }
+]
+```
+
+---
 
 **PUT /api/households/invites/:inviteId/accept**  
-Accept a group invite. Adds user to the group.
+Accept a group invite. Adds the user to the group.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "665abc...", "name": "Apartment 4B", "members": [...] }
+```
+
+Errors: `404` invite not found
+
+---
 
 **DELETE /api/households/invites/:inviteId**  
-Decline a group invite.
+Decline a group invite.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Invite declined" }
+```
 
 ---
 
 ### Expenses — `/api/expenses`
 
+---
+
 **GET /api/expenses/group-balance**  
 Net balance across all groups for the current user.  
-Returns: `{ balance }` (positive = owed to you, negative = you owe)
+Auth required: Yes
+
+Example response (200):
+```json
+{ "balance": 24.50 }
+```
+
+Positive = owed to you, negative = you owe.
+
+---
 
 **GET /api/expenses/:householdId**  
-Get all expenses for a group, each with their splits.
+Get all expenses for a group with splits.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  {
+    "_id": "668abc...",
+    "description": "Groceries",
+    "amount": 60,
+    "category": "food",
+    "payer_id": { "_id": "664abc...", "name": "John Doe" },
+    "splits": [
+      { "_id": "669abc...", "user_id": { "name": "John Doe" }, "amount_owed": 30, "is_paid": true },
+      { "_id": "669def...", "user_id": { "name": "Jane" }, "amount_owed": 30, "is_paid": false }
+    ]
+  }
+]
+```
+
+---
 
 **POST /api/expenses**  
 Add a new group expense.  
-Body: `{ household_id, amount, description, category, paid_by_id?, split_among?, receipt_url? }`  
-`split_among` is an array of user IDs — defaults to all members if omitted.  
-Returns: the created expense
+Auth required: Yes
+
+Request body:
+```json
+{
+  "household_id": "665abc...",
+  "amount": 60,
+  "description": "Groceries",
+  "category": "food",
+  "paid_by_id": "664abc...",
+  "split_among": ["664abc...", "664def..."],
+  "receipt_url": "data:image/png;base64,..."
+}
+```
+
+`split_among` is optional — defaults to all members. `receipt_url` is optional.
+
+Example response (201):
+```json
+{ "_id": "668abc...", "description": "Groceries", "amount": 60, "category": "food" }
+```
+
+---
 
 **PUT /api/expenses/:id**  
 Edit an expense and recalculate splits.  
-Body: `{ amount?, description?, category?, paid_by_id?, split_among?, receipt_url? }`
+Auth required: Yes
+
+Request body (all fields optional):
+```json
+{ "amount": 75, "description": "Groceries run", "category": "food" }
+```
+
+Example response (200):
+```json
+{ "_id": "668abc...", "description": "Groceries run", "amount": 75 }
+```
+
+---
 
 **DELETE /api/expenses/:id**  
-Delete an expense and all its splits.
+Delete an expense and all its splits.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Deleted" }
+```
+
+---
 
 **PUT /api/expenses/splits/:splitId/pay**  
-Mark a single split as paid.
+Mark a single expense split as paid.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "669abc...", "amount_owed": 30, "is_paid": true }
+```
+
+---
 
 **PUT /api/expenses/settle-all/:householdId**  
-Mark all of the current user's unpaid splits in a group as paid.
+Mark all of the current user's unpaid splits in a group as paid.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Settled" }
+```
 
 ---
 
 ### Friends — `/api/friends`
 
+---
+
 **GET /api/friends/requests**  
-Get pending friend requests sent to the current user.
+Get all pending friend requests sent to the current user.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  { "_id": "670abc...", "requester_id": { "name": "Jane", "email": "jane@example.com" }, "status": "pending" }
+]
+```
+
+---
 
 **GET /api/friends/balances**  
-Get balance with each friend (positive = they owe you, negative = you owe them).
+Get balance with each friend.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  { "friendship_id": "670abc...", "friend": { "name": "Jane", "email": "jane@example.com" }, "balance": -15.00 }
+]
+```
+
+Positive = friend owes you, negative = you owe friend.
+
+---
 
 **POST /api/friends/request**  
 Send a friend request by email.  
-Body: `{ email }`  
-Errors: 404 if user not found, 400 if already friends or request pending
+Auth required: Yes
+
+Request body:
+```json
+{ "email": "jane@example.com" }
+```
+
+Example response (200):
+```json
+{ "message": "Friend request sent" }
+```
+
+Errors: `404` user not found, `400` already friends or request already pending
+
+---
 
 **PUT /api/friends/:id/accept**  
-Accept a friend request.
+Accept a friend request.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "670abc...", "status": "accepted" }
+```
+
+Errors: `404` request not found
+
+---
 
 **DELETE /api/friends/:id**  
-Remove a friend or decline a request.
+Remove a friend or decline a request.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Removed" }
+```
+
+---
 
 **GET /api/friends/:friendId/expenses**  
-Get all direct expenses shared between current user and a friend.
+Get all direct expenses shared between current user and a friend.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  {
+    "_id": "671abc...",
+    "description": "Lunch",
+    "amount": 30,
+    "payer_id": { "name": "John Doe" },
+    "splits": [...]
+  }
+]
+```
+
+---
 
 **POST /api/friends/:friendId/expenses**  
-Add a direct expense with a friend (split 50/50).  
-Body: `{ amount, description, category, paidBy }` where `paidBy` is `"me"` or `"friend"`
+Add a direct expense with a friend, split 50/50.  
+Auth required: Yes
+
+Request body:
+```json
+{ "amount": 30, "description": "Lunch", "category": "food", "paidBy": "me" }
+```
+
+`paidBy` is either `"me"` or `"friend"`.
+
+Example response (201):
+```json
+{ "_id": "671abc...", "description": "Lunch", "amount": 30 }
+```
+
+---
 
 **POST /api/friends/:friendId/settle**  
-Mark all shared expenses with a friend as settled.
+Mark all shared expenses with a friend as settled.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Settled" }
+```
 
 ---
 
 ### Chores — `/api/chores`
 
+---
+
 **GET /api/chores/:householdId**  
-Get all chores for a group.
+Get all chores for a group.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  {
+    "_id": "672abc...",
+    "title": "Take out trash",
+    "assigned_to": { "name": "John Doe" },
+    "frequency": "weekly",
+    "is_complete": false
+  }
+]
+```
+
+---
 
 **POST /api/chores**  
 Create a chore.  
-Body: `{ household_id, title, assigned_to, frequency, due_date? }`
+Auth required: Yes
+
+Request body:
+```json
+{ "household_id": "665abc...", "title": "Take out trash", "assigned_to": "664abc...", "frequency": "weekly" }
+```
+
+Example response (201):
+```json
+{ "_id": "672abc...", "title": "Take out trash", "assigned_to": { "name": "John Doe" }, "is_complete": false }
+```
+
+---
 
 **PUT /api/chores/:id**  
-Update a chore (e.g., mark complete, reassign).  
-Body: any chore fields
+Update a chore — mark complete, reassign, etc.  
+Auth required: Yes
+
+Request body:
+```json
+{ "is_complete": true }
+```
+
+Example response (200):
+```json
+{ "_id": "672abc...", "title": "Take out trash", "is_complete": true }
+```
+
+---
 
 **DELETE /api/chores/:id**  
-Delete a chore.
+Delete a chore.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Deleted" }
+```
 
 ---
 
 ### Shopping List — `/api/shopping`
 
+---
+
 **GET /api/shopping/:householdId**  
-Get all shopping items for a group.
+Get all shopping items for a group.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  { "_id": "673abc...", "name": "Milk", "quantity": 2, "is_checked": false, "added_by": { "name": "John Doe" } }
+]
+```
+
+---
 
 **POST /api/shopping**  
-Add an item. Emits `shopping:add` via Socket.io.  
-Body: `{ household_id, name, quantity? }`
+Add a shopping item. Emits `shopping:add` via Socket.io.  
+Auth required: Yes
+
+Request body:
+```json
+{ "household_id": "665abc...", "name": "Milk", "quantity": 2 }
+```
+
+Example response (201):
+```json
+{ "_id": "673abc...", "name": "Milk", "quantity": 2, "is_checked": false }
+```
+
+---
 
 **PUT /api/shopping/:id**  
-Update an item (e.g., check it off). Emits `shopping:update`.  
-Body: any item fields
+Update an item — check it off, change quantity, etc. Emits `shopping:update`.  
+Auth required: Yes
+
+Request body:
+```json
+{ "is_checked": true }
+```
+
+Example response (200):
+```json
+{ "_id": "673abc...", "name": "Milk", "is_checked": true }
+```
+
+---
 
 **DELETE /api/shopping/checked/:householdId**  
-Delete all checked-off items in a group. Emits `shopping:delete` for each.
+Delete all checked-off items in a group. Emits `shopping:delete` for each removed item.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Cleared" }
+```
+
+---
 
 **DELETE /api/shopping/:id**  
-Delete a single item. Emits `shopping:delete`.
+Delete a single shopping item. Emits `shopping:delete`.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Deleted" }
+```
 
 ---
 
 ### Messages — `/api/messages`
 
+---
+
 **GET /api/messages/:householdId**  
-Get all messages for a group, sorted oldest first.
+Get all messages for a group, sorted oldest first.  
+Auth required: Yes
+
+Example response (200):
+```json
+[
+  { "_id": "674abc...", "content": "Did anyone buy soap?", "sender_id": { "name": "John Doe" }, "timestamp": "2026-05-01T10:00:00Z" }
+]
+```
+
+---
 
 **POST /api/messages**  
 Send a message. Emits `message:new` via Socket.io.  
-Body: `{ household_id, content }`
+Auth required: Yes
+
+Request body:
+```json
+{ "household_id": "665abc...", "content": "Did anyone buy soap?" }
+```
+
+Example response (201):
+```json
+{ "_id": "674abc...", "content": "Did anyone buy soap?", "sender_id": { "name": "John Doe" } }
+```
+
+---
 
 **DELETE /api/messages/:id**  
-Delete your own message.  
-Errors: only deletes if `sender_id` matches current user
+Delete your own message. Only works if sender matches current user.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "message": "Deleted" }
+```
 
 ---
 
 ### Splits — `/api/splits`
 
-**PUT /api/splits/:splitId/pay**  
-Mark an individual expense split as paid.
-
 ---
 
-All routes except `/api/auth/register` and `/api/auth/login` require an `Authorization: Bearer <token>` header.
+**PUT /api/splits/:splitId/pay**  
+Mark an individual expense split as paid.  
+Auth required: Yes
+
+Example response (200):
+```json
+{ "_id": "669abc...", "amount_owed": 30, "is_paid": true }
+```
